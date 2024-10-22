@@ -12,14 +12,17 @@ service ChatService {
 message ChatMessageClient {
     string sender = 1;
     string message = 2;
+    int32 timestamp  = 3;
 }
 
 message ClientName {
     string clientName = 1;
+    int32 timestamp  = 2;
 }
 
 message ServerResponse {
     string message = 1;
+    int32 timestamp  = 2;
 }
 
 message Empty {}
