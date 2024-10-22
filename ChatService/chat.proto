@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "Chitty-Chat/ChatService";
+
+package ChatService;
+
+service ChatService {
+    rpc AddClient(stream ChatMessageClient) returns (stream ServerResponse);
+    rpc LeaveChat(ClientName) returns (Empty);
+}
+
+message ChatMessageClient {
+    string sender = 1;
+    string message = 2;
+}
+
+message ClientName {
+    string clientName = 1;
+}
+
+message ServerResponse {
+    string message = 1;
+}
+
+message Empty {}
