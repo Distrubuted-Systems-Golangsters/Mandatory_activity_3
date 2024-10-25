@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "Chitty-Chat/ChatService";
+option go_package = "Chitty-Chat/grpc";
 
-package ChatService;
+package grpc;
 
 service ChatService {
     rpc AddClient(stream ChatMessageClient) returns (stream ServerResponse);
@@ -12,17 +12,17 @@ service ChatService {
 message ChatMessageClient {
     string sender = 1;
     string message = 2;
-    int32 timestamp  = 3;
+    int64 timestamp  = 3;
 }
 
 message ClientName {
     string clientName = 1;
-    int32 timestamp  = 2;
+    int64 timestamp  = 2;
 }
 
 message ServerResponse {
     string message = 1;
-    int32 timestamp  = 2;
+    int64 timestamp  = 2;
 }
 
 message Empty {}

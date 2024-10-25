@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.28.2
-// source: ChatService/chat.proto
+// source: grpc/chat.proto
 
-package ChatService
+package grpc
 
 import (
 	context "context"
@@ -19,8 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChatService_AddClient_FullMethodName = "/ChatService.ChatService/AddClient"
-	ChatService_LeaveChat_FullMethodName = "/ChatService.ChatService/LeaveChat"
+	ChatService_AddClient_FullMethodName = "/grpc.ChatService/AddClient"
+	ChatService_LeaveChat_FullMethodName = "/grpc.ChatService/LeaveChat"
 )
 
 // ChatServiceClient is the client API for ChatService service.
@@ -134,7 +134,7 @@ func _ChatService_LeaveChat_Handler(srv interface{}, ctx context.Context, dec fu
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ChatService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "ChatService.ChatService",
+	ServiceName: "grpc.ChatService",
 	HandlerType: (*ChatServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -150,5 +150,5 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "ChatService/chat.proto",
+	Metadata: "grpc/chat.proto",
 }

@@ -1,7 +1,7 @@
 package util
 
 import (
-	pb "Chitty-Chat/ChatService"
+	pb "Chitty-Chat/grpc"
 	"fmt"
 	"log"
 	"sync"
@@ -9,6 +9,7 @@ import (
 
 var Clients = make(map[string]Client)
 var mu sync.Mutex
+var LamportTimestamp int64 = 0
 
 func AddClientToMap(client Client) {
 	mu.Lock()
@@ -30,31 +31,25 @@ func GetUserJoinedMessage(cs_bcs pb.ChatService_AddClientServer) (*pb.ChatMessag
 func RecieveMessages(client Client) {
 	for {
 		messageobj, err := client.Stream.Recv()
+
 		if err != nil {
 			log.Printf("Could not recieve message %v\n", err)
 			*client.ErrCh <- err
 		}
 
-		message := fmt.Sprintf("%s: %s", messageobj.Sender, messageobj.Message)
-		BroadcastChatMessage(message, messageobj.Sender)
-	}
-}
+		mu.Lock()
+		LamportTimestamp = max(LamportTimestamp, messageobj.Timestamp) + 1
+		mu.Unlock()
 
-func BroadcastChatMessage(message string, senderName string) {
-	// Broadcast the received message to all clients except 
-	// the client that the message was sent from.
-	mu.Lock()
-	for _, client := range Clients {
-		if client.ClientName != senderName {
-			go SendMessage(client, message)
-		}
+		message := fmt.Sprintf("%s: %s", messageobj.Sender, messageobj.Message)
+		BroadcastMessage(message)
 	}
-	mu.Unlock()
 }
 
 func BroadcastMessage(message string) {
 	// Broadcast the received message to all clients
 	mu.Lock()
+	LamportTimestamp++;
 	for _, client := range Clients {
 		go SendMessage(client, message)
 	}
@@ -62,7 +57,7 @@ func BroadcastMessage(message string) {
 }
 
 func SendMessage(client Client, message string) {
-	err := client.Stream.Send(&pb.ServerResponse{ Message: message })
+	err := client.Stream.Send(&pb.ServerResponse{ Message: message, Timestamp: LamportTimestamp })
 	if err != nil {
 		log.Printf("Could not send message to %s. %v\n", client.ClientName, err)
 	}

@@ -1,7 +1,7 @@
 package util
 
 import (
-	pb "Chitty-Chat/ChatService"
+	pb "Chitty-Chat/grpc"
 )
 
 type Client struct {

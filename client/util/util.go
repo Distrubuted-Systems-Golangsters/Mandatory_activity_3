@@ -1,7 +1,7 @@
 package util
 
 import (
-	pb "Chitty-Chat/ChatService"
+	pb "Chitty-Chat/grpc"
 	"bufio"
 	"context"
 	"fmt"
@@ -12,6 +12,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+var LamportTimestamp int64 = 0
 
 func StartApp() string {
 	reader := bufio.NewReader(os.Stdin)
@@ -34,18 +36,18 @@ func SendMessages(stream pb.ChatService_AddClientClient, clientName string, clie
 		}
 		enteredMessage = strings.Trim(enteredMessage, "\r\n")
 
+		LamportTimestamp++
+
 		if enteredMessage == "quit" {
-			client.LeaveChat(context.Background(), &pb.ClientName{ ClientName: clientName })
+			client.LeaveChat(context.Background(), &pb.ClientName{ ClientName: clientName, Timestamp: LamportTimestamp })
 			break
 		}
 
 		// Clear enteredMessage in console
 		fmt.Print("\033[A\033[2K")
-		sendErr := stream.Send(&pb.ChatMessageClient{ Sender: clientName, Message: enteredMessage })
+		sendErr := stream.Send(&pb.ChatMessageClient{ Sender: clientName, Message: enteredMessage, Timestamp: LamportTimestamp })
 		if sendErr != nil {
 			fmt.Printf("There was an error while sending message to server %v\n", sendErr)
-		} else {
-			fmt.Printf("Me: %s\n", enteredMessage)
 		}
 	}
 }
@@ -57,7 +59,9 @@ func RecieveMessages(stream pb.ChatService_AddClientClient) {
 			fmt.Printf("There was an error while receiving message: %v\n", err)
 		}
 
-		fmt.Println(messageobj.Message)
+		LamportTimestamp = max(LamportTimestamp, messageobj.Timestamp) + 1
+
+		fmt.Printf("%s { Timestamp: %d }\n", messageobj.Message, LamportTimestamp)
 	}
 }
 
@@ -71,7 +75,8 @@ func CreateClientServerConnection() (*grpc.ClientConn, error) {
 
 func SendInitialMessage(stream grpc.BidiStreamingClient[pb.ChatMessageClient, pb.ServerResponse], clientName string) error {
 	message := fmt.Sprintf("[%s has joined the chat]", clientName)
-	err := stream.Send(&pb.ChatMessageClient{ Sender: clientName, Message: message })
+	LamportTimestamp++
+	err := stream.Send(&pb.ChatMessageClient{ Sender: clientName, Message: message, Timestamp: LamportTimestamp })
 
 	return err
 }

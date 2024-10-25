@@ -1,33 +1,34 @@
 package main
 
 import (
-	pb "Chitty-Chat/ChatService"
-	"Chitty-Chat/client/util"
+	clientUtil "Chitty-Chat/client/util"
+	pb "Chitty-Chat/grpc"
 	"context"
 	"log"
 )
 
+
 func main() {
-	conn, err := util.CreateClientServerConnection()
+	conn, err := clientUtil.CreateClientServerConnection()
 	if err != nil {
 		log.Fatalf("Connection failed: %v\n", err)
 	}
 
 	client := pb.NewChatServiceClient(conn)
-	clientName := util.StartApp()
+	clientName := clientUtil.StartApp()
 
 	stream, err := client.AddClient(context.Background())
 	if err != nil {
 		log.Fatalf("Failed to start stream: %v\n", err)
 	}
 
-	err = util.SendInitialMessage(stream, clientName)
+	err = clientUtil.SendInitialMessage(stream, clientName)
 	if err != nil {
 		log.Fatalf("Failed to send initial message: %v\n", err)
 	}
 
-	go util.SendMessages(stream, clientName, client)
-	go util.RecieveMessages(stream)
+	go clientUtil.SendMessages(stream, clientName, client)
+	go clientUtil.RecieveMessages(stream)
 
 	//blocker
 	bl := make(chan bool)
