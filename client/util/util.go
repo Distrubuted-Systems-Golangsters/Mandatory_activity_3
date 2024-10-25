@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -35,6 +36,11 @@ func SendMessages(stream pb.ChatService_AddClientClient, clientName string, clie
 			log.Fatalf("Failed to read from console: %v\n", err)
 		}
 		enteredMessage = strings.Trim(enteredMessage, "\r\n")
+
+		if len(enteredMessage) > 128 || !utf8.ValidString(enteredMessage) {
+			log.Println("!!! Invalid string !!!")
+			continue
+		} 
 
 		LamportTimestamp++
 
