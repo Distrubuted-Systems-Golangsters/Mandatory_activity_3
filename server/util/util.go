@@ -41,6 +41,8 @@ func RecieveMessages(client Client) {
 		LamportTimestamp = max(LamportTimestamp, messageobj.Timestamp) + 1
 		mu.Unlock()
 
+		log.Printf("Recieved message. { Timestamp: %d }\n", LamportTimestamp)
+
 		message := fmt.Sprintf("%s: %s", messageobj.Sender, messageobj.Message)
 		BroadcastMessage(message)
 	}
@@ -49,7 +51,9 @@ func RecieveMessages(client Client) {
 func BroadcastMessage(message string) {
 	// Broadcast the received message to all clients
 	mu.Lock()
-	LamportTimestamp++;
+	LamportTimestamp++
+	log.Printf("Broadcasting message. { Timestamp: %d }\n", LamportTimestamp)
+
 	for _, client := range Clients {
 		go SendMessage(client, message)
 	}

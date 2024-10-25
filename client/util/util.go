@@ -39,12 +39,14 @@ func SendMessages(stream pb.ChatService_AddClientClient, clientName string, clie
 		LamportTimestamp++
 
 		if enteredMessage == "quit" {
+			log.Printf("Client leaving chat... { Timestamp: %d }\n", LamportTimestamp)
 			client.LeaveChat(context.Background(), &pb.ClientName{ ClientName: clientName, Timestamp: LamportTimestamp })
 			break
 		}
 
 		// Clear enteredMessage in console
 		fmt.Print("\033[A\033[2K")
+		log.Printf("Publishing message... { Timestamp: %d }\n", LamportTimestamp)
 		sendErr := stream.Send(&pb.ChatMessageClient{ Sender: clientName, Message: enteredMessage, Timestamp: LamportTimestamp })
 		if sendErr != nil {
 			fmt.Printf("There was an error while sending message to server %v\n", sendErr)
@@ -61,7 +63,7 @@ func RecieveMessages(stream pb.ChatService_AddClientClient) {
 
 		LamportTimestamp = max(LamportTimestamp, messageobj.Timestamp) + 1
 
-		fmt.Printf("%s { Timestamp: %d }\n", messageobj.Message, LamportTimestamp)
+		log.Printf("%s { Timestamp: %d }\n", messageobj.Message, LamportTimestamp)
 	}
 }
 

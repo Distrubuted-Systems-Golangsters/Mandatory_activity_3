@@ -31,6 +31,8 @@ func (s Server) AddClient(cs_bcs pb.ChatService_AddClientServer) error {
 	util.LamportTimestamp++
 	mu.Unlock()
 
+	log.Printf("%s has joined the chat { Timestamp: %d }\n", messageobj.Sender, util.LamportTimestamp)
+
 	client := util.Client{ ClientName: messageobj.Sender, Stream: cs_bcs, ErrCh: &errCh }
 	util.AddClientToMap(client)
 
@@ -46,7 +48,10 @@ func (s Server) AddClient(cs_bcs pb.ChatService_AddClientServer) error {
 
 func (s Server) LeaveChat(ctx context.Context, in *pb.ClientName) (*pb.Empty, error) {
 	util.RemoveClientFromMap(in.ClientName)
+
 	util.LamportTimestamp = max(util.LamportTimestamp, in.Timestamp) + 1
+	log.Printf("%s has left the chat { Timestamp: %d }\n", in.ClientName, util.LamportTimestamp)
+
 	message := fmt.Sprintf("[%s has left the chat]", in.ClientName)
 	util.BroadcastMessage(message)
 
