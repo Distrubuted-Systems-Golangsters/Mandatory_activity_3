@@ -84,6 +84,7 @@ func CreateClientServerConnection() (*grpc.ClientConn, error) {
 func SendInitialMessage(stream grpc.BidiStreamingClient[pb.ChatMessageClient, pb.ServerResponse], clientName string) error {
 	message := fmt.Sprintf("[%s has joined the chat]", clientName)
 	LamportTimestamp++
+	log.Printf("Client joining chat... { Timestamp: %d }", LamportTimestamp)
 	err := stream.Send(&pb.ChatMessageClient{ Sender: clientName, Message: message, Timestamp: LamportTimestamp })
 
 	return err
