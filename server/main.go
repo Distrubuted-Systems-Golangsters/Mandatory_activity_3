@@ -1,7 +1,8 @@
 package main
 
 import (
-	pb "Chitty-Chat/ChatService"
+	pb "Chitty-Chat/grpc"
+	"Chitty-Chat/server/util"
 	"context"
 	"fmt"
 	"log"
@@ -11,92 +12,50 @@ import (
 	"google.golang.org/grpc"
 )
 
-type server struct {
+type Server struct {
 	pb.UnimplementedChatServiceServer
 }
 
-type client struct {
-	clientName string
-	stream pb.ChatService_AddClientServer
-	errCh *chan error
-}
-
-var clients = make(map[string]client)
 var mu sync.Mutex
 
-func (s *server) AddClient(cs_bcs pb.ChatService_AddClientServer) error {
+func (s Server) AddClient(cs_bcs pb.ChatService_AddClientServer) error {
 	errCh := make(chan error)
-	messageobj, err := cs_bcs.Recv()
+	messageobj, err := util.GetUserJoinedMessage(cs_bcs)
+
 	if err != nil {
 		log.Printf("Could not recieve initial message %v", err)
 		errCh <- err
 	}
 
-	client := client{clientName: messageobj.Sender, stream: cs_bcs, errCh: &errCh}
 	mu.Lock()
-	clients[client.clientName] = client
+	util.LamportTimestamp++
 	mu.Unlock()
-	
+
+	log.Printf("%s has joined the chat { Timestamp: %d }\n", messageobj.Sender, util.LamportTimestamp)
+
+	client := util.Client{ ClientName: messageobj.Sender, Stream: cs_bcs, ErrCh: &errCh }
+	util.AddClientToMap(client)
+
 	// Start a goroutine for the newly connected client
 	// that listens for incomming messages from that client
-	go recieveMessage(client)
+	go util.RecieveMessages(client)
 
-	// Broadcast new client joined  message to all clients except the 
-	// client where the message was sent from. 
-	broadcastChatMessage(messageobj.Message, messageobj.Sender)
+	// Broadcast new "client joined" message to all clients
+	util.BroadcastMessage(messageobj.Message)
 
 	return <-errCh
 }
 
-func (s *server) LeaveChat(ctx context.Context, in *pb.ClientName) (*pb.Empty, error) {
-	mu.Lock()
-	delete(clients, in.ClientName)
-	mu.Unlock()
+func (s Server) LeaveChat(ctx context.Context, in *pb.ClientName) (*pb.Empty, error) {
+	util.RemoveClientFromMap(in.ClientName)
+
+	util.LamportTimestamp = max(util.LamportTimestamp, in.Timestamp) + 1
+	log.Printf("%s has left the chat { Timestamp: %d }\n", in.ClientName, util.LamportTimestamp)
 
 	message := fmt.Sprintf("[%s has left the chat]", in.ClientName)
-	broadcastMessage(message)
+	util.BroadcastMessage(message)
 
 	return &pb.Empty{}, nil
-}
-
-func recieveMessage(client client) {
-	for {
-		messageobj, err := client.stream.Recv()
-		if err != nil {
-			log.Printf("Could not recieve message %v\n", err)
-			*client.errCh <- err
-		}
-
-		message := fmt.Sprintf("%s: %s", messageobj.Sender, messageobj.Message)
-		// Broadcast the received message to all clients except 
-		// the client that the message was sent from.
-		broadcastChatMessage(message, messageobj.Sender)
-	}
-}
-
-func broadcastChatMessage(message string, senderName string) {
-	mu.Lock()
-	for _, client := range clients {
-		if client.clientName != senderName {
-			go sendMessage(client, message)
-		}
-	}
-	mu.Unlock()
-}
-
-func broadcastMessage(message string) {
-	mu.Lock()
-	for _, client := range clients {
-		go sendMessage(client, message)
-	}
-	mu.Unlock()
-}
-
-func sendMessage(client client, message string) {
-	err := client.stream.Send(&pb.ServerResponse{ Message: message })
-	if err != nil {
-		log.Printf("Could not send message to %s. %v\n", client.clientName, err)
-	}
 }
 
 func main() {
@@ -108,7 +67,7 @@ func main() {
 	log.Printf("Server listening on %v\n", lis.Addr())
 
 	s := grpc.NewServer()
-	pb.RegisterChatServiceServer(s, &server{})
+	pb.RegisterChatServiceServer(s, &Server{})
 	
 	if err:= s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v\n", err)
