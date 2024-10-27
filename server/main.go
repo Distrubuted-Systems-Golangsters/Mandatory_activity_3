@@ -28,7 +28,7 @@ func (s Server) AddClient(cs_bcs pb.ChatService_AddClientServer) error {
 	}
 
 	mu.Lock()
-	util.LamportTimestamp++
+	util.LamportTimestamp = max(util.LamportTimestamp, messageobj.Timestamp) + 1
 	mu.Unlock()
 
 	log.Printf("%s has joined the chat { Timestamp: %d }\n", messageobj.Sender, util.LamportTimestamp)
